@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <div class="messages"></div>
+    <audio controls autoplay id="myaudio"></audio>  
+    <audio controls autoplay id="otheraudio"></audio>  
+    <div class="contrs">
+      <input type="button" value="开始聊天" id="talk"/>  
+      <input type="button" value="获取录音" onclick="obtainRecord()"/>   
+      <input type="button" value="发送" id="sendBtn"/>  
+      <!-- <input type="button" value="播放录音" onclick="playRecord()"/>   -->
+    </div>
+    <div class="error">
+    </div>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/src/jquery-3.2.1.min.js"></script>
+  <script src="/src/recoder.js"></script>
+  <script src="/src/main.js"></script>
+  <script>
+    $(function () {
+      var socket = io();  //io.connect('http://127.0.0.1:3000');不填默认连接本地
+      $('form').submit(function(){
+        socket.emit('chat message', $('#m').val());
+        $('#m').val('');
+        return false;
+      });
+      socket.on('connect', function (soc) {
+        console.log(soc)
+        console.log('connect successed');
+      });
+      socket.on('chat message', function(msg){
+        $('#messages').append($('<li>').text(msg));
+      });
+      // $('#sendBtn').click(function (){
+      //   send(socket)
+      // })
+      var list = []
+      var once = true
+      var audio = document.querySelector('#otheraudio'); 
+      window.URL = window.URL || window.webkitURL;  
+      audio.addEventListener('ended',function(){
+        setTimeout(() => {
+          console.log(list)
+          audio.src = window.URL.createObjectURL(list.shift());
+        }, 200);
+      }) 
+      socket.on('wavMsg', function(msg){
+        // $('#messages').append($('<li>').text(msg));
+        console.log('音频')
+        console.log(msg)
+        // 接收这里有坑，[msg]一定要用数组括号将arraybuffer包括不然转不了
+        var mp3 = new Blob([msg], { type: 'audio/wav' })
+        list.push(mp3)
+        if (once) {
+          audio.src = window.URL.createObjectURL(list.shift());
+          once = false
+        }
+      });
+
+      function startingTalk () {
+        startRecording()
+        setTimeout(() => {
+          send(socket,startingTalk)
+        }, 2000);
+      }
+      $('#talk').click(function(){
+        startingTalk()
+      })
+    });
+    
+  </script>
+</html>
