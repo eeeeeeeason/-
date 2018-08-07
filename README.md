@@ -2,5 +2,12 @@
 - 近一周内完成nodejs基于websocket进行网络通话
   - 步骤分为3步
     - 1.基于websocket进行两端通讯理解
-    - 2.完成mysql本地部署后了解yun2win项目后
+      - 目前已完成音频的单次通讯，将音频文件转为blob在socket.io协助下完成点到服务器，再由服务器广播的功能，但是如何持续通话，保持通话质量还有很多要考虑的点
+    - 2.寻找webrtc相关文档
+      - https://juejin.im/post/5b3f50ca6fb9a04fd65931e1#heading-3
+      - https://www.aliyun.com/jiaocheng/1184422.html?spm=5176.100033.2.6.79YlPV
     - 3.猜测基于webrtc的API准备理解
+    - 4.查找是否有相关开源仓库
+      - easyrtc ,正在翻看相关文档
+      - webRTC.io ,似乎没有成熟demo
+      - SimpleWebRTC ,作者已经一年没有维护。准备废弃的案例
