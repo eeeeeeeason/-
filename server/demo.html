@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/src/jquery-3.2.1.min.js"></script>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  房间！！！！
+  <video src="" id="vid1" style="width:300px;height:200px"></video>
+  <video src="" id="vid2" style="width:300px;height:200px"></video>
+  <script>
+    $(function(){
+      var socket = io();  //io.connect('http://127.0.0.1:3000');不填默认连接本地
+      socket.on('connect', function (soc) {
+        console.log(soc)
+        console.log('connect successed');
+      });
+      // 默认消息事件触发
+      socket.on('message',function(data){
+        console.log(data);
+      });
+      // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
+      var pc = new RTCPeerConnection(null);
+      console.log(pc)
+      // 发送ICE候选到其他客户端
+      pc.onicecandidate = function(event) {
+        console.log('qqq')
+        if (event.candidate !== null) {
+          console.log('event')
+          console.log(event)
+          socket.emit("_ice_candidate",JSON.stringify(event.candidate));
+        }
+      };
+      // 
+      socket.on('_ice_candidate', function(e) {
+        let data = JSON.parse(e)
+        console.log(data)
+        console.log('触发ice')
+        pc.addIceCandidate(data)
+      })
+      // 获取媒体信息
+      navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      }).then((stream) => {
+        let video = document.querySelector('#vid1')
+        video.srcObject = stream
+        console.log(stream)
+        video.onloadedmetadata = () => video.play()
+        //向PeerConnection中加入需要发送的流
+        sendStream(stream)
+        function sendStream(stream) {
+          let tracks = stream.getTracks()
+          console.log('addtrackkkk')
+          tracks.forEach((track) => {
+            pc.addTrack(track, stream)
+          })
+        }
+        
+        // pc.createOffer().then((desc)=>{
+        //   pc.setLocalDescription(desc)
+        //   console.log(desc)
+        //   console.log('desccccccc')
+        //   socket.emit('offer', JSON.stringify(desc))    //SDP
+        // })
+        function errorHandler () {
+          console.log('error')
+        }
+        pc.createOffer(function (offer) {
+          pc.setLocalDescription(offer, function() {
+            console.log('offerrrrrr')
+            console.log(pc)
+            socket.emit('offer', JSON.stringify(pc.localDescription)) 
+          }, errorHandler);
+        }, errorHandler, {offerToReceiveAudio: true,offerToReceiveVideo: true});
+      })
+      //收到接收响应时
+      socket.on('answer', function(e) {
+        console.log(e)
+        console.log('onanswerrrrr')
+        // var abc =  new RTCSessionDescription(e)
+        pc.setRemoteDescription(e)
+      })
+      // 获取数据时触发
+      pc.ontrack = function(e) {
+        console.log('trackkkkkkkkk')
+        console.log(e)
+        let stream1 = e.streams[0]
+        // 把stream塞到video上
+        let video2 = document.querySelector('#vid2')
+        video2.srcObject = stream1
+        video2.onloadedmetadata = () => video2.play()
+      }
+      socket.on('offer', async function(e) {
+        let data = JSON.parse(e)
+        console.log(data)
+        console.log('接收主机')
+        // var abc =  new RTCSessionDescription(data)
+        pc.setRemoteDescription(data)
+          console.log('zzzz')
+          pc.createAnswer().then((desc)=>{
+            console.log('createAnswer')
+            pc.setLocalDescription(desc)
+            socket.emit('answer', desc)
+        })
+      })
+  })
+  </script>
+</body>
+</html>

@@ -7,21 +7,28 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/testSignaling.html');
 });
 let sockList = []
+let iceReciveMsg
 io.on('connection', function(socket){
   sockList = Object.keys(io.sockets.sockets)
   console.log(socket.id)
   console.log(sockList)
-  console.log(io.sockets.sockets)
+  // console.log(io.sockets.sockets)
+  
   socket.send('连接成功，欢迎用户');//FIXME:似乎无法工作？，无法发送对象{status: 1,msg: '连接成功，欢迎用户'}，只能发送字符串，客户端采用默认onmessage事件触发
   socket.on('wav', function(msg){
-    console.log(msg)
+    // console.log(msg)
     io.emit('wavMsg', msg);
     // console.log(msg);
   });
   socket.on('_ice_candidate',function(msg){
     // io.emit('_ice_candidate', msg); //修改为发送给处我以外的人
     sockList.forEach(element => {
+      // if (element == socket.id&&sockList.length == 1) {
+      //   iceReciveMsg = msg
+      //   console.log(`${socket.id}的ice收集`)
+      // }
       if (element == socket.id) return;
+      console.log(`发送给${element}`)
       io.sockets.connected[element].emit('_ice_candidate', msg);
     });
     // io.sockets.sockets
@@ -29,6 +36,9 @@ io.on('connection', function(socket){
   socket.on('offer',function(msg){
     // io.emit('offer', msg);
     sockList.forEach(element => {
+      if (element == socket.id&&sockList.length == 1) {
+        offerMasterMsg = msg
+      }
       if (element == socket.id) return;
       io.sockets.connected[element].emit('offer', msg);
     });
@@ -37,6 +47,7 @@ io.on('connection', function(socket){
     // io.emit('answer', msg);
     sockList.forEach(element => {
       if (element == socket.id) return;
+      console.log(`${element}发送answer`)
       io.sockets.connected[element].emit('answer', msg);
     });
   })

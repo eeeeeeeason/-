@@ -13,91 +13,133 @@
   房间！！！！
   <video src="" id="vid1" style="width:300px;height:200px"></video>
   <video src="" id="vid2" style="width:300px;height:200px"></video>
+  <button id="callBtn" onclick="callOther()">呼叫另一方</button>
   <script>
-    $(function(){
+    // $(function(){
+      // $('#callBtn').click(function(){callOther()})
       var socket = io();  //io.connect('http://127.0.0.1:3000');不填默认连接本地
       socket.on('connect', function (soc) {
-        console.log(soc)
-        console.log('connect successed');
       });
       // 默认消息事件触发
       socket.on('message',function(data){
-        console.log(data);
       });
       // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
-      var pc = new RTCPeerConnection(null); //发送方
-      var pc1 = new RTCPeerConnection(null);  //接收方
-      console.log(pc)
+      var pc = new RTCPeerConnection(null);
+      pc.onaddstream = function (event) {
+        let vid2 = document.getElementById('vid2')
+        vid2.srcObject = event.stream
+        vid2.onloadedmetadata = function(e) {
+            vid2.play();
+          };
+      }
       // 发送ICE候选到其他客户端
       pc.onicecandidate = function(event) {
-        console.log('qqq')
         if (event.candidate !== null) {
-          socket.emit("_ice_candidate",JSON.stringify(event.candidate));
+          console.log('房主3onicecandidate或成员4onicecandidate')
+          console.log(event.candidate)
+          // if (event.candidate.protocol == 'tcp') {
+            socket.emit("_ice_candidate",JSON.stringify({
+              type: '_candidate',
+              data: {
+                candidate: event.candidate
+              }
+            })
+            );
+          // }
         }
       };
-      // 
+      var i = 1
+      // 接收ice
       socket.on('_ice_candidate', function(e) {
-        let data = JSON.parse(e)
-        console.log(data)
-        pc1.addIceCandidate(data)
+        console.log('收到对方ice')
+        // if (i<=3){
+          let json = JSON.parse(e)
+          console.log(json)
+          pc.addIceCandidate(new RTCIceCandidate(json.data.candidate))
+        // }
+        ++i
       })
-      // 获取媒体信息
-      navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
-      }).then((stream) => {
-        let video = document.querySelector('#vid1')
-        video.srcObject = stream
-        console.log(stream)
-        video.onloadedmetadata = () => video.play()
-        //向PeerConnection中加入需要发送的流
-        sendStream(stream)
-        function sendStream(stream) {
-          let tracks = stream.getTracks()
-          console.log('addtrackkkk')
-          tracks.forEach((track) => {
-            pc.addTrack(track, stream)
+      socket.on('answer', function (event) {
+        console.log('onanswer')
+        var json = JSON.parse(event)
+        //设置远端peer的sdp信息
+        pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp));
+      })
+      // 获取外设
+      function getUserMedia(success, fail) {
+        navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true
+        }).then(
+          function (stream) {
+            console.log('successsssss')
+            success && success(stream)
+          }).catch(
+          function (error) {
+            // fail && fail(error)
+            console.warn(error)
           })
-        }
-        // 获取数据时触发
-        pc1.ontrack = function(e) {
-          console.log('trackkkkkkkkk')
-          console.log(e)
-          let stream1 = e.streams[0]
-          // 把stream塞到video上
-          let video2 = document.querySelector('#vid2')
-          video2.srcObject = stream1
-          video2.onloadedmetadata = () => video2.play()
-        }
-        pc.createOffer({offerToReceiveAudio: 1,offerToReceiveVideo: 1}).then((desc)=>{
-          pc.setLocalDescription(desc)
-          console.log(desc)
-          console.log('desccccccc')
-          socket.emit('offer', JSON.stringify(desc))
-        })
-        // 
-        socket.on('offer', async function(e) {
-          let data = JSON.parse(e)
-          console.log(data)
-          console.log('接收主机')
-          var abc =  new RTCSessionDescription(data)
-          pc1.setRemoteDescription(abc)
-            console.log('zzzz')
-            pc1.createAnswer().then((desc)=>{
-              console.log('createAnswer')
-              pc1.setLocalDescription(desc)
-              socket.emit('answer', desc)
+        
+      }
+      // 呼叫
+      function callOther () {
+        console.log('ca;;lllllll')
+        getUserMedia(function (stream) {
+          console.log('callll1111111111')
+          let vid1 = document.getElementById('vid1')
+          vid1.srcObject = stream
+          vid1.onloadedmetadata = function(e) {
+            vid1.play();
+          };
+          pc.addStream(stream)
+          pc.createOffer(sendOffer, function (error) {
+            console.log('发送 offer 失败')
           })
         })
-
-        socket.on('answer', async function(e) {
-          console.log(e)
-          console.log('onanswerrrrr')
-          var abc =  new RTCSessionDescription(e)
-          await pc.setRemoteDescription(abc)
-        })
+      }
+      // FIXME: desc怎么从父级带过来的？？？？
+      function sendOffer (desc) {
+        console.log('sendOffer')
+        pc.setLocalDescription(desc);
+        socket.emit('offer', JSON.stringify({
+        data: {sdp: desc}
+          })
+        )
+      }
+      socket.on('offer', function(e) {
+        console.log('1成员onoffer')
+        getUserMedia(function (stream) {
+        let vid1 = document.getElementById('vid1')
+        console.log(vid1)
+        vid1.srcObject = stream
+        console.log('sssssssssssssssss')
+        vid1.onloadedmetadata = function(e) {
+          vid1.play();
+        };
+        pc.addStream(stream)
+        // 接听视频 todo
+        var json = JSON.parse(e)
+        pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp));
+        // 创建一个answer响应
+        pc.createAnswer(sendAnswer, function (error) {
+          console.log('创建answer失败')
+        });
+      }, function (error) {
+        console.log('摄像头获取失败', '接听视频失败');
       })
-  })
+      })
+      function sendAnswer(desc) {
+          // 接收方设置本地 信息
+          pc.setLocalDescription(desc);
+          // 发送本地desc至服务器
+          socket.emit('answer', JSON.stringify({
+            type: '_answer',
+            data: {
+              sdp: desc
+            }
+          }))
+        }
+  // })
   </script>
 </body>
 </html>
