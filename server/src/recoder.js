@@ -2,7 +2,7 @@
     //兼容  
     window.URL = window.URL || window.webkitURL;  
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;  
-  
+    
     var HZRecorder = function (stream, config) {  
         config = config || {};  
         config.sampleBits = config.sampleBits || 8;      //采样数位 8, 16  
@@ -49,6 +49,7 @@
                 for (var i = 0; i < this.buffer.length; i++) {  
                     data.set(this.buffer[i], offset);  
                     offset += this.buffer[i].length;  
+                    console.log(this.buffer[i].length)
                 }  
                 //压缩  
                 var compression = parseInt(this.inputSampleRate / this.outputSampleRate);  
@@ -67,6 +68,7 @@
                 var sampleBits = Math.min(this.inputSampleBits, this.oututSampleBits);  
                 var bytes = this.compress();  
                 var dataLength = bytes.length * (sampleBits / 8);  
+                console.log('本次datalength为'+dataLength)
                 var buffer = new ArrayBuffer(44 + dataLength);  
                 var data = new DataView(buffer);  
   
@@ -148,6 +150,8 @@
         };  
         
         this.clear=function(){
+          console.log('清空了发送buffer数组')
+          audioData.size = 0
             audioData.buffer=[];
         }
   

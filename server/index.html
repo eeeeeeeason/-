@@ -49,37 +49,58 @@
       socket.on('chat message', function(msg){
         $('#messages').append($('<li>').text(msg));
       });
-      // $('#sendBtn').click(function (){
-      //   send(socket)
-      // })
+      $('#sendBtn').click(function (){
+        startRecording(function(){
+          setTimeout(() => {
+            send(socket)
+          }, 10000);
+        })
+      })
       var list = []
       var once = true
       var audio = document.querySelector('#otheraudio'); 
       window.URL = window.URL || window.webkitURL;  
       audio.addEventListener('ended',function(){
-        setTimeout(() => {
           console.log(list)
-          audio.src = window.URL.createObjectURL(list.shift());
-        }, 200);
-      }) 
+          console.log(new Date().toLocaleTimeString()+'音频播放结束时间')
+          console.log(new Date().getTime())
+          if (list.length==0){
+            console.log(list)
+            console.log('list长度为0000000000000000000000')
+            setTimeout(() => {
+              audio.src = window.URL.createObjectURL(list.shift());
+            }, 1500);
+          } else {
+            audio.src = window.URL.createObjectURL(list.shift());
+          }
+      })
       socket.on('wavMsg', function(msg){
         // $('#messages').append($('<li>').text(msg));
-        console.log('音频')
+        var time = new Date().toLocaleTimeString()
+        console.log('接收音频'+time)
+        console.log(new Date().getTime())
         console.log(msg)
         // 接收这里有坑，[msg]一定要用数组括号将arraybuffer包括不然转不了
         var mp3 = new Blob([msg], { type: 'audio/wav' })
         list.push(mp3)
+        console.log(list)
         if (once) {
           audio.src = window.URL.createObjectURL(list.shift());
+          var time = new Date().toLocaleTimeString()
+          console.log('播放音频时间'+time)
+          console.log(new Date().getTime())
           once = false
         }
       });
 
       function startingTalk () {
-        startRecording()
-        setTimeout(() => {
-          send(socket,startingTalk)
-        }, 2000);
+        // startRecording(function(){
+          // setTimeout(() => {
+            startRecording(send(socket))
+          
+        //   }, 2000);
+        // }) 
+        
       }
       $('#talk').click(function(){
         startingTalk()

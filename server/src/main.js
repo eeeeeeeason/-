@@ -2,8 +2,7 @@
           var timer
             var audio = document.querySelector('audio');  
               
-            function startRecording() { 
-              debugger 
+            function startRecording(callback) { 
               if(recorder){
                 recorder.start();
                 return;
@@ -12,6 +11,8 @@
               HZRecorder.get(function (rec) {  
                 recorder = rec;  
                 recorder.start();  
+                if (!callback) return
+                callback()
               },{error:showError});  
             }  
               
@@ -59,28 +60,40 @@
             //发送音频片段
             var msgId=1;
             function send(io,callback){
-              if(!recorder) {
-                showError("请先录音");
-                return;
-              }
-               var data=recorder.getBlob();
-               //TODO:
-               console.log(io)
-               console.log(data.blob)
-               io.emit('wav', data.blob);
-               console.log(data.blob)
-               if(data.duration==0){
-                showError("请先录音");
-                return;
-               }
-                msg[msgId]=data;
-                recorder.clear();
-                callback()
-                // console.log(data);
-                var dur=data.duration/10;
-                 var str="<div class='warper'><div id="+msgId+" class='voiceItem'>"+dur+"s</div></div>"
-                $(".messages").append(str);
-                msgId++;
+              
+              setInterval(function(){
+                
+                var time = new Date().toLocaleTimeString()
+                console.log('发送音频时间'+time)
+                console.log(recorder)
+                if(!recorder) {
+                  showError("请先录音");
+                  return;
+                }
+                console.log(recorder)
+                var data=recorder.getBlob();
+                console.log(data)
+  
+                 //TODO:
+                 console.log(io)
+                 console.log(data.blob)
+                 io.emit('wav', data.blob);
+                 console.log(data.blob)
+                 if(data.duration==0){
+                  showError("请先录音");
+                  return;
+                 }
+                 recorder.clear();
+                 console.log('clear是否成功进行')
+                 msg[msgId]=data;
+                  // if (!callback) return
+                  // callback()
+                  // console.log(data);
+                  var dur=data.duration/10;
+                   var str="<div class='warper'><div id="+msgId+" class='voiceItem'>"+dur+"s</div></div>"
+                  $(".messages").append(str);
+                  msgId++;
+              },1000)
             }
             
             $(document).on("click",".voiceItem",function(){
