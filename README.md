@@ -11,3 +11,6 @@
       - easyrtc ,正在翻看相关文档
       - webRTC.io ,似乎没有成熟demo
       - SimpleWebRTC ,作者已经一年没有维护。准备废弃的案例
+ - 目前完成
+    - 独立完成了webrtc的内网搭建
+    - 找到google开源的corturn转发服务，配置服务需要两个ip暂时没搞懂
